@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>文本对比助手</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+      margin: 0;
+      padding: 15px;
+      background-color: #f6f8fa;
+      color: #24292e;
+      font-size: 14px;
+    }
+
+    .container {
+      max-width: 100%;
+      margin: 0 auto;
+    }
+
+    h1 {
+      text-align: center;
+      margin-bottom: 15px;
+      font-size: 18px;
+    }
+
+    .diff-container {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+
+    .input-section {
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .input-container {
+      width: 100%;
+    }
+
+    .input-header {
+      background-color: #f1f1f1;
+      padding: 8px;
+      border: 1px solid #d1d5da;
+      border-bottom: none;
+      border-radius: 6px 6px 0 0;
+      font-weight: bold;
+      font-size: 14px;
+    }
+
+    textarea {
+      width: 100%;
+      height: 150px;
+      padding: 8px;
+      border: 1px solid #d1d5da;
+      border-radius: 0 0 6px 6px;
+      font-family: monospace;
+      resize: vertical;
+      box-sizing: border-box;
+      font-size: 13px;
+    }
+
+    .button-container {
+      text-align: center;
+      margin: 15px 0;
+    }
+
+    button {
+      background-color: #2ea44f;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 15px;
+      transition: background-color 0.2s;
+    }
+
+    button:hover {
+      background-color: #2c974b;
+    }
+
+    .result-container {
+      border: 1px solid #d1d5da;
+      border-radius: 6px;
+      overflow: hidden;
+    }
+
+    .result-header {
+      background-color: #f1f1f1;
+      padding: 8px;
+      border-bottom: 1px solid #d1d5da;
+      font-weight: bold;
+      font-size: 14px;
+    }
+
+    .diff-result {
+      background-color: white;
+      padding: 8px;
+      font-family: monospace;
+      white-space: pre-wrap;
+      overflow-x: auto;
+      line-height: 1.4;
+    }
+
+    .diff-line {
+      display: flex;
+      flex-direction: row;
+      align-items: start;
+    }
+
+    .line-number {
+      color: #6e7781;
+      text-align: right;
+      padding-right: 8px;
+      user-select: none;
+      min-width: 30px;
+      font-size: 12px;
+    }
+
+    .line-content {
+      flex: 1;
+      word-break: break-word;
+    }
+
+    .addition {
+      background-color: #e6ffec;
+      border-left: 3px solid #2ea44f;
+    }
+
+    .deletion {
+      background-color: #ffebe9;
+      border-left: 3px solid #cf222e;
+    }
+
+    .addition .line-content {
+      color: #24292e;
+    }
+
+    .deletion .line-content {
+      color: #24292e;
+    }
+
+    .highlight-add {
+      background-color: #abf2bc;
+      border-radius: 2px;
+      padding: 0 2px;
+    }
+
+    .highlight-del {
+      background-color: #f8c9c9;
+      border-radius: 2px;
+      padding: 0 2px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>文本对比助手</h1>
+
+    <div class="diff-container">
+      <div class="input-section">
+        <div class="input-container">
+          <div class="input-header">原始文本</div>
+          <textarea id="original-text" placeholder="在此粘贴原始文本..."></textarea>
+        </div>
+        <div class="input-container">
+          <div class="input-header">修改后文本</div>
+          <textarea id="modified-text" placeholder="在此粘贴修改后文本..."></textarea>
+        </div>
+      </div>
+
+      <div class="button-container">
+        <button id="compare-btn">对比文本</button>
+      </div>
+
+      <div class="result-container">
+        <div class="result-header">对比结果</div>
+        <div class="diff-result" id="diff-result">
+          <div class="diff-line">
+            <span class="line-number">1</span>
+            <span class="line-content">点击"对比文本"按钮查看结果</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    document.getElementById('compare-btn').addEventListener('click', function () {
+      const originalText = document.getElementById('original-text').value;
+      const modifiedText = document.getElementById('modified-text').value;
+
+      compareDiff(originalText, modifiedText);
+    });
+
+    function compareDiff(originalText, modifiedText) {
+      // 将文本分割成行
+      let originalLines = originalText.split('\n');
+      let modifiedLines = modifiedText.split('\n');
+
+      // 使用LCS算法计算差异
+      const diff = computeDiff(originalLines, modifiedLines);
+
+      // 显示差异
+      displayDiff(diff, originalLines, modifiedLines);
+    }
+
+    function computeDiff(originalLines, modifiedLines) {
+      const result = [];
+      let i = 0, j = 0;
+
+      // 简单的差异算法
+      while (i < originalLines.length || j < modifiedLines.length) {
+        if (i < originalLines.length && j < modifiedLines.length && originalLines[i] === modifiedLines[j]) {
+          // 相同行
+          result.push({ type: 'same', originalIndex: i, modifiedIndex: j });
+          i++;
+          j++;
+        } else {
+          // 尝试向前查找匹配
+          let foundMatch = false;
+
+          // 查找下一个匹配行
+          for (let k = 1; k < 3 && i + k < originalLines.length; k++) {
+            if (j < modifiedLines.length && originalLines[i + k] === modifiedLines[j]) {
+              // 找到匹配，标记删除行
+              for (let l = 0; l < k; l++) {
+                result.push({ type: 'delete', originalIndex: i + l });
+              }
+              i += k;
+              foundMatch = true;
+              break;
+            }
+          }
+
+          if (!foundMatch) {
+            for (let k = 1; k < 3 && j + k < modifiedLines.length; k++) {
+              if (i < originalLines.length && originalLines[i] === modifiedLines[j + k]) {
+                // 找到匹配，标记添加行
+                for (let l = 0; l < k; l++) {
+                  result.push({ type: 'add', modifiedIndex: j + l });
+                }
+                j += k;
+                foundMatch = true;
+                break;
+              }
+            }
+          }
+
+          // 如果没有找到匹配，则标记为修改
+          if (!foundMatch) {
+            if (i < originalLines.length && j < modifiedLines.length) {
+              result.push({ type: 'change', originalIndex: i, modifiedIndex: j });
+              i++;
+              j++;
+            } else if (i < originalLines.length) {
+              result.push({ type: 'delete', originalIndex: i });
+              i++;
+            } else if (j < modifiedLines.length) {
+              result.push({ type: 'add', modifiedIndex: j });
+              j++;
+            }
+          }
+        }
+      }
+
+      return result;
+    }
+
+    function displayDiff(diff, originalLines, modifiedLines) {
+      const resultContainer = document.getElementById('diff-result');
+      resultContainer.innerHTML = '';
+
+      diff.forEach(item => {
+        const diffLine = document.createElement('div');
+        const lineNumber = document.createElement('span');
+        const lineContent = document.createElement('span');
+
+        lineNumber.className = 'line-number';
+        lineContent.className = 'line-content';
+
+        switch (item.type) {
+          case 'same':
+            diffLine.className = 'diff-line';
+            lineNumber.textContent = (item.originalIndex + 1);
+            lineContent.textContent = originalLines[item.originalIndex];
+            break;
+          case 'add':
+            diffLine.className = 'diff-line addition';
+            lineNumber.textContent = '+';
+            lineContent.innerHTML = `<span class="highlight-add">${modifiedLines[item.modifiedIndex]}</span>`;
+            break;
+          case 'delete':
+            diffLine.className = 'diff-line deletion';
+            lineNumber.textContent = '-';
+            lineContent.innerHTML = `<span class="highlight-del">${originalLines[item.originalIndex]}</span>`;
+            break;
+          case 'change':
+            // 创建两行：一行删除，一行添加
+            const deleteLine = document.createElement('div');
+            const deleteLineNumber = document.createElement('span');
+            const deleteLineContent = document.createElement('span');
+
+            deleteLine.className = 'diff-line deletion';
+            deleteLineNumber.className = 'line-number';
+            deleteLineContent.className = 'line-content';
+
+            deleteLineNumber.textContent = '-';
+            deleteLineContent.innerHTML = `<span class="highlight-del">${originalLines[item.originalIndex]}</span>`;
+
+            deleteLine.appendChild(deleteLineNumber);
+            deleteLine.appendChild(deleteLineContent);
+            resultContainer.appendChild(deleteLine);
+
+            // 添加行
+            diffLine.className = 'diff-line addition';
+            lineNumber.textContent = '+';
+            lineContent.innerHTML = `<span class="highlight-add">${modifiedLines[item.modifiedIndex]}</span>`;
+            break;
+        }
+
+        diffLine.appendChild(lineNumber);
+        diffLine.appendChild(lineContent);
+        resultContainer.appendChild(diffLine);
+      });
+
+      if (diff.length === 0) {
+        const diffLine = document.createElement('div');
+        diffLine.className = 'diff-line';
+        diffLine.innerHTML = '<span class="line-number">-</span><span class="line-content">两段文本完全相同</span>';
+        resultContainer.appendChild(diffLine);
+      }
+    }
+  </script>
+</body>
+</html>
