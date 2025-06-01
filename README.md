@@ -2,7 +2,7 @@
 
 一个简单易用的文本对比工具，帮助您快速发现两段文本之间的差异。类似于GitHub的代码对比功能，使用红色和绿色分别标记删除和添加的内容。
 
-![文本对比助手截图](screenshot.png)
+![文本对比助手截图](https://github.com/user-attachments/assets/1208403e-99d5-4607-aba7-524cce442d42)
 
 ## 功能特点
 
